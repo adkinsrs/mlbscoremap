@@ -8,7 +8,7 @@ Currently mlbscoremap.py will output a PDF file of the heatmap
 
 Future considerations
 ----------------------
-Grab data straight from the web and unzip
-Filter scores by individual teams or leagues
-Add other categories as filterable (there are 170-ish total)
-Plot cells will have tooltips showing number of occurences of that score combination
+* Grab data straight from the web and unzip
+* Filter scores by individual teams or leagues
+* Add other categories as filterable (there are 170-ish total)
+* Plot cells will have tooltips showing number of occurences of that score combination
