@@ -37,7 +37,7 @@ class GameSet:
         return
 
     # Create the heatmap using our dictionary of games
-    def create_heatmap(self):
+    def create_heatmap(self, outfile):
     
         # Get labels of runs scored from a range of scores
         ascore_labels = range(get_highest_score('ascore', self.games)+1)    
@@ -86,7 +86,7 @@ class GameSet:
             t.tick1On = False
             t.tick2On = False
         
-        plt.savefig('heatmap.pdf', bbox_inches='tight')
+        plt.savefig(outfile, bbox_inches='tight')
             
 # Retrieve max score from all data
 def get_highest_score(cat, games):
@@ -144,14 +144,20 @@ def open_file(file):
 
 def main():
     # Set up options parser and help usage statement
-    usage = "usage: %prog -i /path/to/schedule/data.txt"
+    usage = "usage: %prog -i </path/to/schedule/data.txt> [ -o <filename> ]"
     description = "Creates a filterable heatmap of Major League Baseball scores"
     parser = OptionParser(usage=usage, description=description)
-    parser.add_option("-i", "--input_file", help="yearly schedule data .txt file found from http://www.retrosheet.org/gamelogs/index.html")
+    parser.add_option("-i", "--input_file", help="Yearly schedule data .txt file found from http://www.retrosheet.org/gamelogs/index.html")
+    parser.add_option("-o", "--output_file", help="(Optional) Filename for output file to be saved in current directory")
     (options, args) = parser.parse_args()
     
     if not options.input_file:
         parser.error("Input data file must be provided")
+
+    if options.output_file:
+        outfile = options.output_file
+    else:
+        outfile = "heatmap.pdf"
         
     # Later add option to use urlopen to grab directly from site    
     fh = open_file(options.input_file)
@@ -159,7 +165,7 @@ def main():
     gs = GameSet()
     gs.parse_file(fh)
     fh.close()
-    gs.create_heatmap()
+    gs.create_heatmap(outfile)
     
 if __name__ == '__main__':
     main()
