@@ -17,76 +17,77 @@ import numpy as np
 import re
 import sys
 
-# Parse the game logs file
-def parse_file(fh):
+class GameSet:
+  
+    # Initialize object
+    def __init__(self):
+        self.games = []  # list of games from the data
     
-    games = []  # list of games
-    # Baseball game categories I would like to store, for now
-    categories = ['date', 'dblheader', 'weekday', 'ateam', 'aleague', 'agame', 'hteam', 'hleague', 'hgame', 'ascore', 'hscore', 'length', 'daynight']
-    
-    # Parse out the data from each line, and add to proper category in dictionary
-    for line in iter(fh.readline, ''):
-        game = {}   # dictionary for a game
-        data = re.split(',', line, 13)
-        for i in range(len(categories)):
-            game[categories[i]] = data[i]
+    # Parse the game logs file
+    def parse_file(self, fh):
+  
+        # Parse out the data from each line, and add to proper category in dictionary
+        for line in iter(fh.readline, ''):
+            game = Game()   # create new Game object
+            data = re.split(',', line, 13)
+            game.populate_categories(data)
             
-        # Append our newest game data to the stack of games
-        games.append(game)
-    return games
+            # Append our newest game data to the stack of games
+            self.games.append(game)
+        return
 
-# Create the heatmap using our dictionary of games
-def create_heatmap(games):
+    # Create the heatmap using our dictionary of games
+    def create_heatmap(self):
     
-    # Get labels from a range of scores
-    ascore_labels = range(get_highest_score("ascore", games)+1)    
-    hscore_labels = range(get_highest_score("hscore", games)+1)
+        # Get labels of runs scored from a range of scores
+        ascore_labels = range(get_highest_score('ascore', self.games)+1)    
+        hscore_labels = range(get_highest_score('hscore', self.games)+1)
+        
+        # Get data (x is home scores, y is away scores)
+        data = get_scores(self.games, hscore_labels, ascore_labels)
+        data = np.array(data)
+        # Plot it out
+        fig, ax = plt.subplots()
+        # Add colors, using a Blue-Purple colormap, with normalization
+        heatmap = ax.pcolor(data, cmap=plt.cm.BuPu, norm=LogNorm(), alpha=1)
     
-    # Get data (x is home scores, y is away scores)
-    data = get_scores(games, hscore_labels, ascore_labels)
-    data = np.array(data)
-    # Plot it out
-    fig, ax = plt.subplots()
-    # Add colors, using a Blue-Purple colormap, with normalization
-    heatmap = ax.pcolor(data, cmap=plt.cm.BuPu, norm=LogNorm(), alpha=1)
-    
-    # Format
-    fig = plt.gcf()
-    fig.set_size_inches(8, 11)
-    
-    # Adding labels
-    fig.suptitle("Final Score Frequency", fontsize=20)
-
-    # turn off the frame
-    ax.set_frame_on(False)
-
-    # put the major ticks at the middle of each cell
-    ax.set_yticks(np.arange(data.shape[0]) + 0.5, minor=False)
-    ax.set_xticks(np.arange(data.shape[1]) + 0.5, minor=False)    
-    
-    # Setting labels
-    ax.set_xticklabels(hscore_labels, minor=False)
-    ax.set_yticklabels(ascore_labels, minor=False)
-    ax.set_xlabel("Home team score")
-    ax.set_ylabel("Away team score")
-
-    # want a more natural, table-like display
-    ax.invert_yaxis()
-    ax.xaxis.tick_top()     
-    ax.xaxis.set_label_position("top")
-    
-    # Turn off all the ticks
-    ax = plt.gca()
-
-    for t in ax.xaxis.get_major_ticks():
-        t.tick1On = False
-        t.tick2On = False
-    for t in ax.yaxis.get_major_ticks():
-        t.tick1On = False
-        t.tick2On = False
-    
-    plt.savefig('heatmap.pdf', bbox_inches='tight')
-
+        # Format
+        fig = plt.gcf()
+        fig.set_size_inches(8, 11)
+        
+        # Adding labels
+        fig.suptitle("Final Score Frequency", fontsize=20)
+        
+        # turn off the frame
+        ax.set_frame_on(False)
+        
+        # put the major ticks at the middle of each cell
+        ax.set_yticks(np.arange(data.shape[0]) + 0.5, minor=False)
+        ax.set_xticks(np.arange(data.shape[1]) + 0.5, minor=False)    
+        
+        # Setting labels
+        ax.set_xticklabels(hscore_labels, minor=False)
+        ax.set_yticklabels(ascore_labels, minor=False)
+        ax.set_xlabel("Home team score")
+        ax.set_ylabel("Away team score")
+        
+        # want a more natural, table-like display
+        ax.invert_yaxis()
+        ax.xaxis.tick_top()     
+        ax.xaxis.set_label_position("top")
+        
+        # Turn off all the ticks
+        ax = plt.gca()
+        
+        for t in ax.xaxis.get_major_ticks():
+            t.tick1On = False
+            t.tick2On = False
+        for t in ax.yaxis.get_major_ticks():
+            t.tick1On = False
+            t.tick2On = False
+        
+        plt.savefig('heatmap.pdf', bbox_inches='tight')
+            
 # Retrieve max score from all data
 def get_highest_score(cat, games):
     return int(max(gather_category(cat, games), key=int))
@@ -95,7 +96,7 @@ def get_highest_score(cat, games):
 def gather_category(cat, games):
     values = set()
     for game in games:
-        values.add(game[cat])
+        values.add(getattr(game, cat))
     return list(values)
 
 # Create a matrix of home and away scores
@@ -112,8 +113,20 @@ def get_scores(games, hlabels, alabels):
     
     # Now increment whenever a score combo is found
     for game in games:
-        data[int(game["ascore"])][int(game["hscore"])] += 1
+        data[int(game.ascore)][int(game.hscore)] += 1
     return data
+
+class Game:
+    # Baseball game categories I would like to store, for now
+    categories = ['date', 'dblheader', 'weekday', 'ateam', 'aleague', 'agame', 'hteam', 'hleague', 'hgame', 'ascore', 'hscore', 'length', 'daynight']
+    
+    # Initialize object
+    def __init__(self):
+        pass
+    
+    def populate_categories(self, data):
+        for i in range(len(self.categories)):
+            setattr(self, self.categories[i], data[i])
 
 # Filter results by a particular team (eventually adjust to filter by any category
 def filter_by_team():
@@ -142,9 +155,11 @@ def main():
         
     # Later add option to use urlopen to grab directly from site    
     fh = open_file(options.input_file)
-    games = parse_file(fh)
+    
+    gs = GameSet()
+    gs.parse_file(fh)
     fh.close()
-    create_heatmap(games)
+    gs.create_heatmap()
     
 if __name__ == '__main__':
     main()
