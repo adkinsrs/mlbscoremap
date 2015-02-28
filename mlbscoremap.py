@@ -20,8 +20,9 @@ import sys
 class GameSet:
   
     # Initialize object
-    def __init__(self):
+    def __init__(self, team):
         self.games = []  # list of games from the data
+        self.team = team
     
     # Parse the game logs file
     def parse_file(self, fh):
@@ -33,7 +34,8 @@ class GameSet:
             game.populate_categories(data)
             
             # Append our newest game data to the stack of games
-            self.games.append(game)
+            if (game.team_in_game(self.team)):
+                self.games.append(game)
         return
 
     # Create the heatmap using our dictionary of games
@@ -88,6 +90,8 @@ class GameSet:
         
         plt.savefig(outfile, bbox_inches='tight')
             
+### MATPLOTLIB functions
+
 # Retrieve max score from all data
 def get_highest_score(cat, games):
     return int(max(gather_category(cat, games), key=int))
@@ -126,7 +130,16 @@ class Game:
     
     def populate_categories(self, data):
         for i in range(len(self.categories)):
-            setattr(self, self.categories[i], data[i])
+            item = data[i].replace('"', '')
+            setattr(self, self.categories[i], item)
+            
+    def team_in_game(self, team):
+        if team == '':
+            return True
+        elif self.ateam == team or self.hteam == team:
+            return True
+        else:
+            return False
 
 # Filter results by a particular team (eventually adjust to filter by any category
 def filter_by_team():
@@ -144,11 +157,12 @@ def open_file(file):
 
 def main():
     # Set up options parser and help usage statement
-    usage = "usage: %prog -i </path/to/schedule/data.txt> [ -o <filename> ]"
+    usage = "usage: %prog -i </path/to/schedule/data.txt> [ -o <filename> -t <team initials>]"
     description = "Creates a filterable heatmap of Major League Baseball scores"
     parser = OptionParser(usage=usage, description=description)
     parser.add_option("-i", "--input_file", help="Yearly schedule data .txt file found from http://www.retrosheet.org/gamelogs/index.html")
     parser.add_option("-o", "--output_file", help="(Optional) Filename for output file to be saved in current directory")
+    parser.add_option("-t", "--team_filter", help="(Optional) Filter by an individual team's games (use initials)")
     (options, args) = parser.parse_args()
     
     if not options.input_file:
@@ -159,10 +173,15 @@ def main():
     else:
         outfile = "heatmap.pdf"
         
+    if options.team_filter:
+        team = options.team_filter
+    else:
+        team = ''
+        
     # Later add option to use urlopen to grab directly from site    
     fh = open_file(options.input_file)
     
-    gs = GameSet()
+    gs = GameSet(team)
     gs.parse_file(fh)
     fh.close()
     gs.create_heatmap(outfile)
